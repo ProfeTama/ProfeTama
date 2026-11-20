@@ -133,7 +133,7 @@ export const EscenaNoticia: React.FC<ColacionProps> = ({ titularNoticia, promoci
   const texto = "Mientras tanto...";
   const letras = Math.floor(interpolate(frame, [16, 40], [0, texto.length], clamp));
   const barra = interpolate(frame, [0, 10], [0, 1], { ...clamp });
-  const cinta = `ÚLTIMO MOMENTO ★ ${titularNoticia} ★ ACTO DE COLACIÓN · ${promocion.toUpperCase()} ★ `;
+  const cinta = `ÚLTIMO MOMENTO ★ ${titularNoticia} ★ ${promocion.toUpperCase()} ★ DESTINO: DESCONOCIDO ★ `;
   const desplaz = frame * 14;
   const lluviaFinal = interpolate(frame, [d - 6, d], [0, 1], clamp);
 

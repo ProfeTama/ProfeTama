@@ -1,44 +1,51 @@
+// VIDEO 3 del acto: la Promo 2026 es "chupada" por la TV y aparece en el aula de los 80.
 // Ajustes del vídeo: cambia aquí textos, fotos y años.
-export type Foto = { archivo: string; ancho: number; alto: number; texto: string };
+export type Foto = { archivo: string; ancho: number; alto: number };
 
 export type ColacionProps = {
-  institucion: string;
   promocion: string;
   anioActual: number;
   anioRetro: number;
-  /** Fotos dentro de public/fotos. Vacío = marcadores de colores. */
-  fotos: Foto[];
   /** Texto de la cinta de noticias */
   titularNoticia: string;
+  /** Fotos dentro de public/fotos (no se suben a GitHub). Vacío = marcadores de colores. */
+  fotos: Foto[];
 };
 
+const H: [number, number] = [1672, 941]; // horizontal
+const V: [number, number] = [941, 1672]; // vertical
+const foto = (archivo: string, [ancho, alto]: [number, number]): Foto => ({ archivo, ancho, alto });
+
 export const PROPS_POR_DEFECTO: ColacionProps = {
-  institucion: "Nombre de la Institución",
-  promocion: "Promoción 2026",
+  promocion: "Promo 2026",
   anioActual: 2026,
-  anioRetro: 1989,
-  titularNoticia: "LOS EGRESADOS VIAJAN EN EL TIEMPO",
+  anioRetro: 1986,
+  titularNoticia: "LA PROMO 2026 INICIA UN VIAJE EN EL TIEMPO",
   fotos: [
-    { archivo: "foto1.jpg", ancho: 941, alto: 1672, texto: "Volar alto" },
-    { archivo: "foto2.jpg", ancho: 1672, alto: 941, texto: "Amistad" },
-    { archivo: "foto3.jpg", ancho: 1672, alto: 941, texto: "Risas" },
-    { archivo: "foto4.jpg", ancho: 1040, alto: 1513, texto: "Compañeros" },
-    { archivo: "foto5.jpg", ancho: 1672, alto: 941, texto: "Juntos" },
-    { archivo: "foto6.jpg", ancho: 941, alto: 1670, texto: "Para siempre" },
+    foto("foto10.jpg", H), // ronda con el grabador
+    foto("foto1.jpg", V),
+    foto("foto2.jpg", H),
+    foto("foto3.jpg", H),
+    foto("foto4.jpg", [1040, 1513]),
+    foto("foto7.jpg", H),
+    foto("foto5.jpg", H),
+    foto("foto6.jpg", V),
+    foto("foto8.jpg", H),
+    foto("foto9.jpg", [1670, 942]), // foto grupal para cerrar
   ],
 };
 
 export const FPS = 30;
-// Duración de cada escena (frames)
-// (si las cambias, vuelve a generar la música: python3 scripts/banda_sonora.py)
+// Duración de cada escena (frames).
+// Si las cambias, vuelve a generar la música: python3 scripts/banda_sonora.py
 export const ESCENAS = {
   canal: 54, // 1,8 s  cambio de canal + lluvia
   noticia: 66, // 2,2 s  flash de noticiero "Mientras tanto..."
-  moderno: 105, // 3,5 s
-  rebobinado: 75, // 2,5 s
-  tituloRetro: 120, // 4 s  (entra la música a 120 BPM: 2 compases)
-  fotos: 360, // 12 s  (1 compás = 2 s por foto)
-  final: 120, // 4 s
+  cuenta: 120, // 4 s    cuenta regresiva 3-2-1 que sigue... hasta 1986
+  tv: 60, // 2 s    la TV se los chupa
+  tituloRetro: 60, // 2 s    "Bienvenidos a 1986" (entra la música, 120 BPM)
+  fotos: 450, // 15 s   1,5 s por foto
+  final: 120, // 4 s    atrapados en 1986: "VOLVER A 2026" → ERROR
 };
 export const DURACION_TOTAL = Object.values(ESCENAS).reduce((a, b) => a + b, 0);
 

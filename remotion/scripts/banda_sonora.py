@@ -10,7 +10,7 @@ from scipy.io import wavfile
 SR = 44100
 FPS = 30
 # Debe coincidir con ESCENAS en src/Colacion/config.ts (frames)
-ESC = dict(canal=54, noticia=66, moderno=105, rebobinado=75, tituloRetro=120, fotos=360, final=120)
+ESC = dict(canal=54, noticia=66, cuenta=120, tv=60, tituloRetro=60, fotos=450, final=120)
 T = {}
 acc = 0
 for k, v in ESC.items():
@@ -123,54 +123,67 @@ for k in range(14):
     add(square(1200, 0.025) * env(int(0.025 * SR), a=0.001, d=0.01, s=0.5, r=0.01) * 0.05, t0 + 0.6 + k * 0.1, 1, 0.4)
 # ráfaga de estática al cortar al presente
 br = bp(rng.standard_normal(int(0.3 * SR)), 300, 8000) * 0.3 * env(int(0.3 * SR), a=0.005, d=0.1, s=0.8, r=0.1)
-add(br, T["moderno"] - 0.05, 1)
+add(br, T["cuenta"] - 0.05, 1)
 
-# ─────────── 3. Presente: ambiente moderno limpio ───────────
-t0 = T["moderno"]
-dur_mod = T["rebobinado"] - t0
-moderno = np.zeros(int(dur_mod * SR) + SR)
-pluck_notas = [72, 76, 79, 83, 79, 76, 74, 79]
-for k in range(int(dur_mod / 0.25)):
-    n = pluck_notas[k % len(pluck_notas)]
-    s = np.sin(2 * np.pi * nota(n) * t_(0.6)) * np.exp(-t_(0.6) * 7)
-    i = int(k * 0.25 * SR)
-    moderno[i : i + len(s)] += s * 0.18
-pad = sum(np.sin(2 * np.pi * nota(n) * t_(dur_mod + 1)) for n in [48, 55, 60, 64]) * 0.05
-moderno[: len(pad)] += pad * env(len(pad), a=0.5, d=0.1, s=1, r=0.6)
-sub = np.sin(2 * np.pi * 50 * t_(0.4)) * np.exp(-t_(0.4) * 8)
-for k in range(int(dur_mod / 1.0)):
-    i = int(k * 1.0 * SR); moderno[i : i + len(sub)] += sub * 0.4
-moderno = reverb(moderno, 1.5, 0.35)[: len(moderno)]
-seg = moderno[: int(dur_mod * SR)]
-# "tape stop" en los últimos 0.35 s
-nstop = int(0.35 * SR)
-cola = seg[-nstop:]
-idx = np.cumsum(np.linspace(1, 0.05, nstop)); idx = (idx / idx[-1] * (nstop - 1)).astype(int)
-seg = np.concatenate([seg[:-nstop], cola[idx] * np.linspace(1, 0, nstop)])
-add(seg, t0, 1)
+# ─────────── 3. Cuenta regresiva: 3-2-1… y sigue rebobinando años ───────────
+t0 = T["cuenta"]
+for k in range(3):
+    bip = np.sin(2 * np.pi * 1000 * t_(0.12)) * env(int(0.12 * SR), a=0.002, d=0.02, s=0.8, r=0.02)
+    add(bip * 0.35, t0 + k * 0.5, 1)
+    tick = hp(rng.standard_normal(int(0.02 * SR)) * np.exp(-t_(0.02) * 300), 2000)
+    for m in range(1, 4):
+        add(tick * 0.15, t0 + k * 0.5 + m * 0.125, 1)
+# proyector de cine de fondo
+proy = hp(rng.standard_normal(int(1.5 * SR)), 1500) * (0.5 + 0.5 * np.sign(np.sin(2 * np.pi * 24 * t_(1.5)))) * 0.03
+add(proy, t0, 1)
+# rebobinado: arpegio sintético invertido y acelerado + silbido de cinta
+inicio_rew = t0 + 1.6
+dur_rew = (ESC["cuenta"] - 18) / FPS - 1.6
+base = np.zeros(int(2.5 * SR))
+for k, n in enumerate([60, 64, 67, 72, 76, 72, 67, 64] * 2):
+    s_ = np.sin(2 * np.pi * nota(n) * t_(0.3)) * np.exp(-t_(0.3) * 8)
+    i = int(k * 0.125 * SR); base[i : i + len(s_)] += s_ * 0.3
+base = base[::-1]
+tt = t_(dur_rew)
+vel = 2 + 4 * (tt / dur_rew) ** 2  # acelera
+idx = (np.cumsum(vel) % len(base)).astype(int)
+rew = hp(base[idx], 500) * (1 + 0.4 * np.sin(2 * np.pi * 9 * tt))
+hiss = hp(rng.standard_normal(len(tt)), 4000) * 0.06
+motor = np.sin(2 * np.pi * np.cumsum(700 + 900 * (tt / dur_rew) ** 2) / SR) * 0.05
+add((rew + hiss + motor) * env(len(tt), a=0.05, d=0.1, s=1, r=0.05), inicio_rew, 1)
+# golpe al llegar a 1986
+llegada = t0 + (ESC["cuenta"] - 18) / FPS
+golpe = np.sin(2 * np.pi * np.cumsum(40 + 120 * np.exp(-t_(0.8) * 8)) / SR) * np.exp(-t_(0.8) * 4)
+add(golpe, llegada, 0.9)
+add(hp(rng.standard_normal(int(1.2 * SR)), 5000) * np.exp(-t_(1.2) * 3) * 0.2, llegada, 1)
 
-# ─────────── 4. Rebobinado: chirrido de cinta ───────────
-t0 = T["rebobinado"]
-dur_rew = T["tituloRetro"] - t0
-rew = moderno[::-1]
-idx = (np.arange(int(dur_rew * SR)) * 3.2) % len(rew)
-rew = rew[idx.astype(int)]
-warble = 1 + 0.4 * np.sin(2 * np.pi * 9 * t_(dur_rew))
-rew = hp(rew, 600) * warble * 0.9
-hiss = hp(rng.standard_normal(len(rew)), 4000) * 0.06
-motor = np.sin(2 * np.pi * (900 + 500 * t_(dur_rew) / dur_rew) * t_(dur_rew)) * 0.04
-r = (rew + hiss + motor) * env(len(rew), a=0.05, d=0.1, s=1, r=0.12)
-add(r, t0, 1)
-# "clac" del PLAY
-clac = hp(rng.standard_normal(int(0.05 * SR)) * np.exp(-t_(0.05) * 120), 800)
-add(clac, T["tituloRetro"] - 0.08, 1.2)
+# ─────────── 4. La TV se los chupa: remolino ───────────
+t0 = T["tv"]
+d_tv = ESC["tv"] / FPS
+tt = t_(d_tv)
+ruido = rng.standard_normal(len(tt))
+# barrido de filtro ascendente por tramos
+whoosh = np.zeros_like(ruido)
+pasos = 24
+for k in range(pasos):
+    i0 = int(k * len(tt) / pasos); i1 = int((k + 1) * len(tt) / pasos)
+    fc = 300 + (6000 - 300) * (k / pasos) ** 2
+    seg = bp(ruido[max(0, i0 - 2000) : i1], fc * 0.7, fc * 1.3)
+    whoosh[i0:i1] = seg[-(i1 - i0) :]
+whoosh *= np.linspace(0.1, 1, len(tt)) ** 1.5 * 0.6
+add(whoosh, t0, 1)
+sub = np.sin(2 * np.pi * np.cumsum(30 + 200 * (tt / d_tv) ** 3) / SR) * np.linspace(0.2, 1, len(tt)) * 0.4
+add(sub, t0, 1)
+# "zap" al entrar en la pantalla
+zap = hp(rng.standard_normal(int(0.25 * SR)), 2000) * np.exp(-t_(0.25) * 20) * 0.5
+add(zap, T["tituloRetro"] - 0.05, 1)
 
 # ─────────── 5. Synthwave (desde el PLAY hasta el final) ───────────
 t0 = T["tituloRetro"]
 BPM = 120
 beat = 60 / BPM
 compas = 4 * beat
-fin_musica = DUR
+fin_musica = T["final"] + 88 / FPS
 n_compases = int(np.ceil((fin_musica - t0) / compas))
 # Am – F – C – G
 acordes = [(57, [57, 60, 64]), (53, [53, 57, 60]), (48, [48, 52, 55]), (55, [55, 59, 62])]
@@ -204,6 +217,8 @@ for b in range(n_compases):
     tb = t0 + b * compas
     raiz, triada = acordes[b % 4]
     primer = b == 0
+    if tb >= fin_musica:
+        break
     # golpe inicial grande
     if primer:
         crash = hp(rng.standard_normal(int(2.0 * SR)), 5000) * np.exp(-t_(2.0) * 2.2) * 0.25
@@ -248,9 +263,19 @@ for b in range(n_compases):
             s = lp(s, 4200) * env(len(s), a=0.01, d=0.1, s=0.75, r=0.08)
             add(reverb(echo(s * 0.09, beat * 0.5, 0.3, 2), 1.0, 0.3), tb + pos * beat / 4, 1)
 
-# fundido final
-i_f = int((DUR - 2.0) * SR)
-mix[i_f:] *= np.linspace(1, 0, len(mix) - i_f)[:, None] ** 1.5
+# ERROR: "tape stop" de la música y luego estática hasta el final
+i_err = int(fin_musica * SR)
+nstop = int(0.45 * SR)
+tramo = mix[i_err : i_err + nstop].copy()
+ii = np.cumsum(np.linspace(1, 0.02, nstop)); ii = (ii / ii[-1] * (nstop - 1)).astype(int)
+mix[i_err : i_err + nstop] = tramo[ii] * np.linspace(1, 0, nstop)[:, None]
+mix[i_err + nstop :] = 0
+error_bip = square(220, 0.35) * 0.12 * env(int(0.35 * SR), a=0.002, d=0.05, s=0.8, r=0.05)
+add(lp(error_bip, 3000), fin_musica, 1)
+add(square(180, 0.35) * 0.08, fin_musica + 0.12, 1)
+i_ss = T["final"] + 100 / FPS
+est = bp(rng.standard_normal(int((DUR - i_ss) * SR)), 300, 9000) * 0.3
+add(est * env(len(est), a=0.01, d=0.01, s=1, r=0.2), i_ss, 1)
 mix = mix[: int(DUR * SR)]
 # masterización simple
 mix = hp(mix.T, 25).T

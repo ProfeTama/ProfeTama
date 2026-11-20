@@ -1,7 +1,7 @@
 import { AbsoluteFill, Audio, Series, staticFile } from "remotion";
 import { ColacionProps, ESCENAS } from "./config";
 import { EscenaCanal, EscenaNoticia } from "./tv";
-import { EscenaFinal, EscenaFotos, EscenaModerna, EscenaRebobinado, EscenaTituloRetro } from "./escenas";
+import { EscenaCuenta, EscenaFinal, EscenaFotos, EscenaTituloRetro, EscenaTV } from "./escenas";
 
 export const Colacion: React.FC<ColacionProps> = (props) => (
   <AbsoluteFill style={{ background: "black" }}>
@@ -13,11 +13,11 @@ export const Colacion: React.FC<ColacionProps> = (props) => (
       <Series.Sequence durationInFrames={ESCENAS.noticia}>
         <EscenaNoticia {...props} />
       </Series.Sequence>
-      <Series.Sequence durationInFrames={ESCENAS.moderno}>
-        <EscenaModerna {...props} />
+      <Series.Sequence durationInFrames={ESCENAS.cuenta}>
+        <EscenaCuenta {...props} />
       </Series.Sequence>
-      <Series.Sequence durationInFrames={ESCENAS.rebobinado}>
-        <EscenaRebobinado {...props} />
+      <Series.Sequence durationInFrames={ESCENAS.tv}>
+        <EscenaTV {...props} />
       </Series.Sequence>
       <Series.Sequence durationInFrames={ESCENAS.tituloRetro}>
         <EscenaTituloRetro {...props} />
