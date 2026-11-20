@@ -6,6 +6,8 @@ export type ColacionProps = {
   promocion: string;
   anioActual: number;
   anioRetro: number;
+  /** Día y mes que muestra la videocasetera, ej. "DIC.16" */
+  fechaRetro: string;
   /** Texto de la cinta de noticias */
   titularNoticia: string;
   /** Fotos dentro de public/fotos (no se suben a GitHub). Vacío = marcadores de colores. */
@@ -20,6 +22,7 @@ export const PROPS_POR_DEFECTO: ColacionProps = {
   promocion: "Promo 2026",
   anioActual: 2026,
   anioRetro: 1986,
+  fechaRetro: "DIC.16",
   titularNoticia: "LA PROMO 2026 INICIA UN VIAJE EN EL TIEMPO",
   fotos: [
     foto("foto10.jpg", H), // ronda con el grabador

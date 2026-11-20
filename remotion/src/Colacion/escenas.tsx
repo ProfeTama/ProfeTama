@@ -16,7 +16,6 @@ import { Synthwave } from "./Synthwave";
 import { Lluvia } from "./tv";
 
 const clamp = { extrapolateLeft: "clamp", extrapolateRight: "clamp" } as const;
-const MESES = ["ENE", "FEB", "MAR", "ABR", "MAY", "JUN", "JUL", "AGO", "SEP", "OCT", "NOV", "DIC"];
 
 /* ───────────── 1. Cuenta regresiva que "se lo toma muy en serio" ───────────── */
 export const EscenaCuenta: React.FC<ColacionProps> = ({ anioActual, anioRetro }) => {
@@ -232,7 +231,7 @@ export const EscenaTV: React.FC<ColacionProps> = ({ promocion }) => {
 };
 
 /* ───────────── 3. Bienvenidos a 1986 ───────────── */
-export const EscenaTituloRetro: React.FC<ColacionProps> = ({ anioRetro }) => {
+export const EscenaTituloRetro: React.FC<ColacionProps> = ({ anioRetro, fechaRetro }) => {
   const frame = useCurrentFrame();
   const { fps } = useVideoConfig();
   const sol = interpolate(frame, [0, 40], [0.3, 1], { ...clamp, easing: Easing.out(Easing.cubic) });
@@ -277,7 +276,7 @@ export const EscenaTituloRetro: React.FC<ColacionProps> = ({ anioRetro }) => {
           Bienvenidos a
         </div>
       </AbsoluteFill>
-      <OSD izquierda="PLAY ▶" abajo={`ABR.12 ${anioRetro}`} />
+      <OSD izquierda="PLAY ▶" abajo={`${fechaRetro} ${anioRetro}`} />
       <VHS />
       <AbsoluteFill style={{ background: "white", opacity: flash }} />
     </AbsoluteFill>
@@ -307,7 +306,7 @@ const Imagen: React.FC<{ foto: Foto; n: number; estilo?: React.CSSProperties }> 
     <Marcador n={n} />
   );
 
-export const EscenaFotos: React.FC<ColacionProps> = ({ fotos, anioRetro }) => {
+export const EscenaFotos: React.FC<ColacionProps> = ({ fotos, anioRetro, fechaRetro }) => {
   const frame = useCurrentFrame();
   const lista: Foto[] = fotos.length ? fotos : Array.from({ length: 6 }, () => ({ archivo: "", ancho: 16, alto: 9 }));
   const porFoto = ESCENAS.fotos / lista.length;
@@ -360,7 +359,7 @@ export const EscenaFotos: React.FC<ColacionProps> = ({ fotos, anioRetro }) => {
           </div>
         </AbsoluteFill>
       </Glitch>
-      <OSD izquierda="PLAY ▶" derecha="REC ●" abajo={`ABR.12 ${anioRetro}  ${hora}`} />
+      <OSD izquierda="PLAY ▶" derecha="REC ●" abajo={`${fechaRetro} ${anioRetro}  ${hora}`} />
       <VHS intensidad={0.8} />
     </AbsoluteFill>
   );
