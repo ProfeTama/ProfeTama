@@ -13,6 +13,7 @@ import { ColacionProps, ESCENAS, NEON } from "./config";
 import { Glitch, OSD, VHS } from "./efectos";
 import { FUENTE_CROMO, FUENTE_MODERNA, FUENTE_NEON, FUENTE_SCRIPT, FUENTE_VHS } from "./fuentes";
 import { Synthwave } from "./Synthwave";
+import { Lluvia } from "./tv";
 
 const clamp = { extrapolateLeft: "clamp", extrapolateRight: "clamp" } as const;
 
@@ -23,8 +24,10 @@ export const EscenaModerna: React.FC<ColacionProps> = ({ institucion, anioActual
   const entrada = (d: number) => spring({ frame: frame - d, fps, config: { damping: 200 } });
   const linea = interpolate(frame, [10, 50], [0, 1], { ...clamp, easing: Easing.out(Easing.cubic) });
   const glitch = interpolate(frame, [ESCENAS.moderno - 25, ESCENAS.moderno], [0, 0.6], clamp);
+  const lluvia = interpolate(frame, [0, 3, 8], [1, 1, 0], clamp);
 
   return (
+    <AbsoluteFill>
     <Glitch fuerza={glitch}>
       <AbsoluteFill
         style={{
@@ -72,6 +75,8 @@ export const EscenaModerna: React.FC<ColacionProps> = ({ institucion, anioActual
         </div>
       </AbsoluteFill>
     </Glitch>
+    <Lluvia opacidad={lluvia} />
+    </AbsoluteFill>
   );
 };
 
