@@ -199,7 +199,9 @@ const Marcador: React.FC<{ n: number }> = ({ n }) => (
 export const EscenaFotos: React.FC<ColacionProps> = ({ fotos }) => {
   const frame = useCurrentFrame();
   const { fps } = useVideoConfig();
-  const lista = fotos.length ? fotos : ["", "", "", ""];
+  const lista = fotos.length
+    ? fotos
+    : ["Recuerdos", "Amistad", "Esfuerzo", "Futuro"].map((texto) => ({ archivo: "", ancho: 4, alto: 3, texto }));
   const porFoto = ESCENAS.fotos / lista.length;
 
   return (
@@ -216,12 +218,19 @@ export const EscenaFotos: React.FC<ColacionProps> = ({ fotos }) => {
         const actual = frame < inicio + porFoto || i === lista.length - 1;
         const zoom = interpolate(t, [0, porFoto], [1, 1.06], clamp);
         const revelado = interpolate(t, [5, 35], [0, 1], clamp); // como una polaroid revelándose
+        // tamaño de la foto según orientación (cabe en 1080 de alto con el marco)
+        const altoMax = 740;
+        const anchoMax = 1060;
+        const k = Math.min(altoMax / foto.alto, anchoMax / foto.ancho);
+        const w = foto.ancho * k;
+        const h = foto.alto * k;
         return (
           <AbsoluteFill key={i} style={{ justifyContent: "center", alignItems: "center" }}>
             <div
               style={{
-                width: 760,
-                padding: "34px 34px 130px",
+                position: "relative",
+                width: w + 56,
+                padding: "28px 28px 110px",
                 background: "#f7f3ea",
                 boxShadow: "0 30px 80px rgba(0,0,0,0.6)",
                 transform: `translate(${actual ? 0 : dx}px, ${(1 - caida) * -1200}px) rotate(${angulo}deg) scale(${actual ? zoom : 0.75})`,
@@ -229,10 +238,10 @@ export const EscenaFotos: React.FC<ColacionProps> = ({ fotos }) => {
                 transition: "none",
               }}
             >
-              <div style={{ position: "relative", width: "100%", height: 560, overflow: "hidden", background: "#111" }}>
-                <div style={{ position: "absolute", inset: 0, filter: `sepia(${0.35 + (1 - revelado) * 0.6}) saturate(1.3) contrast(1.05) brightness(${0.4 + revelado * 0.6})` }}>
-                  {foto ? (
-                    <Img src={staticFile(`fotos/${foto}`)} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+              <div style={{ position: "relative", width: w, height: h, overflow: "hidden", background: "#111" }}>
+                <div style={{ position: "absolute", inset: 0, filter: `sepia(${0.12 + (1 - revelado) * 0.7}) saturate(${1.1 + revelado * 0.1}) contrast(1.05) brightness(${0.35 + revelado * 0.65})` }}>
+                  {foto.archivo ? (
+                    <Img src={staticFile(`fotos/${foto.archivo}`)} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
                   ) : (
                     <Marcador n={i} />
                   )}
@@ -243,14 +252,14 @@ export const EscenaFotos: React.FC<ColacionProps> = ({ fotos }) => {
                   position: "absolute",
                   left: 0,
                   right: 0,
-                  bottom: 30,
+                  bottom: 22,
                   textAlign: "center",
                   fontFamily: FUENTE_SCRIPT,
-                  fontSize: 60,
+                  fontSize: 58,
                   color: "#2a1a5e",
                 }}
               >
-                {["Recuerdos", "Amistad", "Esfuerzo", "Futuro", "Juntos", "Logros"][i % 6]}
+                {foto.texto}
               </div>
             </div>
           </AbsoluteFill>
