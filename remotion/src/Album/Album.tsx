@@ -14,7 +14,7 @@ import {
 import { MANUSCRITA, RETRO } from "../Cuaderno/fuentes";
 import { Cinta, Espiral, Hoja, rasgado, Textura } from "../Cuaderno/papel";
 import { PEGATINAS } from "../Cuaderno/pegatinas";
-import { AlbumProps, armarAlbum, COLORES_M, escalon, FotoAlbum, HojaAlbum, MEMPHIS, TA } from "./config";
+import { AlbumProps, armarAlbum, COLORES_M, FotoAlbum, HojaAlbum, MEMPHIS, TA } from "./config";
 import { Confeti } from "./memphis";
 import { Camara, Celular, Destello, GameBoy, Pizza, Tele } from "./pegatinas2";
 
@@ -38,50 +38,57 @@ const STICKERS = [
   () => <Destello />,
 ];
 
-// Disposiciones de fotos (centro x, centro y, ancho máx, alto máx) — sin textos
+// Disposición automática tipo "collage justificado": reparte las fotos en 1, 2 o 3 filas
+// para que ocupen la mayor superficie posible de la hoja, respetando su forma.
 type Lugar = [number, number, number, number];
-const DISPOSICION: Record<number, Lugar[]> = {
-  1: [[990, 510, 1250, 820]],
-  2: [
-    [590, 520, 720, 700],
-    [1380, 500, 720, 700],
-  ],
-  3: [
-    [470, 510, 520, 820],
-    [1170, 290, 760, 400],
-    [1230, 730, 760, 400],
-  ],
-  4: [
-    [620, 290, 660, 400],
-    [1350, 300, 660, 400],
-    [640, 730, 660, 400],
-    [1370, 720, 660, 400],
-  ],
-  5: [
-    [480, 290, 450, 330],
-    [970, 280, 450, 330],
-    [1460, 290, 450, 330],
-    [730, 720, 560, 400],
-    [1260, 720, 560, 400],
-  ],
-  6: [
-    [480, 300, 440, 340],
-    [970, 300, 440, 340],
-    [1460, 300, 440, 340],
-    [480, 720, 440, 340],
-    [970, 720, 440, 340],
-    [1460, 720, 440, 340],
-  ],
-  8: [
-    [390, 300, 330, 360],
-    [790, 300, 360, 340],
-    [1190, 300, 360, 340],
-    [1580, 300, 330, 360],
-    [390, 720, 330, 360],
-    [790, 720, 360, 340],
-    [1190, 720, 360, 340],
-    [1580, 720, 330, 360],
-  ],
+const AREA = { x: 200, y: 125, w: 1540, h: 770 };
+const GAP = 64;
+
+const disponer = (fotos: FotoAlbum[], semilla: string): Lugar[] => {
+  const n = fotos.length;
+  const asp = fotos.map((f) => f.ancho / f.alto);
+  let mejor: { area: number; lugares: Lugar[] } | null = null;
+  for (let r = 1; r <= Math.min(3, n); r++) {
+    // cortar en r filas con suma de proporciones parecida
+    const total = asp.reduce((a, b) => a + b, 0);
+    const filas: number[][] = [];
+    let fila: number[] = [];
+    let acum = 0;
+    asp.forEach((a, i) => {
+      const quedanFilas = r - filas.length;
+      const quedanFotos = n - i;
+      if (fila.length && filas.length < r - 1 && (acum + a / 2 > (total / r) * (filas.length + 1) - 0 && quedanFotos >= quedanFilas)) {
+        filas.push(fila);
+        fila = [];
+      }
+      fila.push(i);
+      acum += a;
+    });
+    filas.push(fila);
+    if (filas.length !== r || filas.some((f) => !f.length)) continue;
+    const alturas = filas.map((f) => (AREA.w - GAP * (f.length - 1)) / f.reduce((s, i) => s + asp[i], 0));
+    const alto = alturas.reduce((a, b) => a + b, 0) + GAP * (r - 1);
+    const k = Math.min(1, AREA.h / alto);
+    const lugares: Lugar[] = [];
+    let y = AREA.y + (AREA.h - alto * k) / 2;
+    let area = 0;
+    filas.forEach((f, fi) => {
+      const h = alturas[fi] * k;
+      const anchoFila = f.reduce((s, i) => s + asp[i] * h, 0) + GAP * (f.length - 1);
+      let x = AREA.x + (AREA.w - anchoFila) / 2;
+      f.forEach((i) => {
+        const w = asp[i] * h;
+        const jx = (random(`${semilla}-jx${i}`) - 0.5) * 24;
+        const jy = (random(`${semilla}-jy${i}`) - 0.5) * 24;
+        lugares[i] = [x + w / 2 + jx, y + h / 2 + jy, w, h];
+        area += w * h;
+        x += w + GAP;
+      });
+      y += h + GAP * k;
+    });
+    if (!mejor || area > mejor.area) mejor = { area, lugares };
+  }
+  return mejor!.lugares;
 };
 
 const EFECTOS = ["caida", "desliza", "giro", "flash", "revelado", "zoom"] as const;
@@ -159,7 +166,7 @@ const FotoPegada: React.FC<{ foto: FotoAlbum; lugar: Lugar; t: number; n: number
     { right: -60, bottom: -60 },
     { left: -60, top: -60 },
   ][esquina];
-  const escPeg = Math.min(1, Math.max(0.55, Math.min(w, h) / 420));
+  const escPeg = Math.min(1, Math.max(0.5, Math.min(w, h) / 380));
 
   return (
     <div
@@ -231,8 +238,8 @@ const lugaresConfeti = (indice: number): [number, number][] => {
 
 const PaginaAlbum: React.FC<{ hoja: HojaAlbum; t: number }> = ({ hoja, t }) => {
   const n = hoja.fotos.length;
-  const lugares = DISPOSICION[n] ?? DISPOSICION[2];
-  const paso = escalon(n);
+  const lugares = disponer(hoja.fotos, `d${hoja.indice}`);
+  const paso = hoja.paso;
   return (
     <Hoja indice={hoja.indice}>
       {t >= 0 ? <Confeti lugares={lugaresConfeti(hoja.indice)} semilla={`h${hoja.indice}`} desde={2} tam={64} /> : null}
@@ -386,7 +393,7 @@ export const Album: React.FC<AlbumProps> = (props) => {
     const n = h.fotos.length;
     h.fotos.forEach((_, i) => {
       const con = n <= 4 || i % 2 === 0;
-      if (con && (h.primera + i) % 2 === 0) pops.push(h.inicio + TA.inicio + i * escalon(n) + 14);
+      if (con && (h.primera + i) % 2 === 0) pops.push(h.inicio + TA.inicio + i * h.paso + 14);
     });
   });
   const vueltas = [TA.tapa - TA.giro, ...hojas.slice(0, -1).map((h) => h.inicio + h.duracion - TA.giro), finHojas];
