@@ -2,3 +2,4 @@ node_modules
 out
 public/fotos/*
 !public/fotos/.gitkeep
+public/album/*
