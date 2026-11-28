@@ -4,6 +4,7 @@ import { Colacion } from "./Colacion/Colacion";
 import { DURACION_TOTAL, FPS, PROPS_POR_DEFECTO } from "./Colacion/config";
 import { Cuaderno } from "./Cuaderno/Cuaderno";
 import { Album } from "./Album/Album";
+import { FondoHoja, FondoTapa, Recursos, TOTAL_RECURSOS } from "./Album/Recursos";
 import { ALBUM_POR_DEFECTO, armarAlbum } from "./Album/config";
 import { armarPaginas, CUADERNO_POR_DEFECTO } from "./Cuaderno/config";
 
@@ -19,6 +20,9 @@ export const RemotionRoot: React.FC = () => {
         height={1080}
         defaultProps={PROPS_POR_DEFECTO}
       />
+      <Composition id="RecursosAlbum" component={Recursos} durationInFrames={TOTAL_RECURSOS} fps={30} width={400} height={400} />
+      <Composition id="FondoHoja" component={FondoHoja} durationInFrames={2} fps={30} width={1920} height={1080} />
+      <Composition id="FondoTapa" component={FondoTapa} durationInFrames={2} fps={30} width={1920} height={1080} />
       <Composition
         id="AlbumPromo"
         component={Album}
