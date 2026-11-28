@@ -70,22 +70,22 @@ def mejor_layout(fotos):
             area = sum(w * h for _, _, _, w, h in lug) / (AW * AH)
             menor = min(min(w, h) for _, _, _, w, h in lug)       # evita fotos diminutas
             pareja = min(w * h for *_, w, h in lug) / max(w * h for *_, w, h in lug)
-            score = area + 0.2 * pareja + (0 if menor > 230 else -1)
+            score = area + 0.2 * pareja + (0 if menor > 210 else -1)
             if mejor is None or score > mejor[0]: mejor = (score, area, lug)
     return mejor
 
-TARGET = 3.6
+TARGET = 4.3
 def armar(lista, ventana, ordenado):
     paginas = []; pool = list(lista)
     while pool:
         cand = pool[:ventana]; best = None
-        for n in range(2, 6):
+        for n in range(3, 7):
             if n > len(pool): break
             combos = [tuple(cand[:n])] if ordenado else itertools.combinations(cand, n)
             for c in combos:
                 if ordenado is False and cand[0] not in c: continue   # avanza siempre
                 sc, area, lug = mejor_layout(c)
-                total = sc - 0.05 * abs(n - TARGET)
+                total = sc - 0.18 * abs(n - TARGET)
                 if best is None or total > best[0]: best = (total, c, lug, area)
         if best is None:  # queda 1 sola
             sc, area, lug = mejor_layout(tuple(pool[:1])); best = (sc, tuple(pool[:1]), lug, area)
