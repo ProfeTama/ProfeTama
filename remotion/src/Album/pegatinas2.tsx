@@ -55,3 +55,51 @@ export const Destello: React.FC<{ color?: string }> = ({ color = MEMPHIS.amarill
     <path d="M50 4 C54 38 62 46 96 50 C62 54 54 62 50 96 C46 62 38 54 4 50 C38 46 46 38 50 4 Z" fill={color} {...borde} />
   </svg>
 );
+
+export const Vinilo = () => (
+  <svg width="150" height="150" viewBox="0 0 100 100" style={sombra}>
+    <circle cx="50" cy="50" r="46" fill="#1b1b1e" {...borde} />
+    {[38, 32, 26].map((r) => (
+      <circle key={r} cx="50" cy="50" r={r} fill="none" stroke="#3a3a40" strokeWidth="1.5" />
+    ))}
+    <circle cx="50" cy="50" r="15" fill={MEMPHIS.rosa} />
+    <circle cx="50" cy="50" r="3" fill="#1b1b1e" />
+    <path d="M22 30 A34 34 0 0 1 40 17" fill="none" stroke="white" strokeOpacity="0.5" strokeWidth="3" strokeLinecap="round" />
+  </svg>
+);
+export const Rubik = () => (
+  <svg width="130" height="130" viewBox="0 0 90 90" style={sombra}>
+    <rect x="5" y="5" width="80" height="80" rx="8" fill="#1b1b1e" {...borde} />
+    {[MEMPHIS.rosa, MEMPHIS.amarillo, MEMPHIS.verde, MEMPHIS.celeste, "#fff", MEMPHIS.naranja, MEMPHIS.verde, MEMPHIS.rosa, MEMPHIS.amarillo].map((c, i) => (
+      <rect key={i} x={10 + (i % 3) * 25} y={10 + Math.floor(i / 3) * 25} width="21" height="21" rx="3" fill={c} />
+    ))}
+  </svg>
+);
+export const Walkman = () => (
+  <svg width="170" height="150" viewBox="0 0 120 105" style={sombra}>
+    <path d="M20 40 C20 5 100 5 100 40" fill="none" stroke="white" strokeWidth="12" />
+    <path d="M20 40 C20 5 100 5 100 40" fill="none" stroke="#333" strokeWidth="5" />
+    <rect x="8" y="34" width="22" height="30" rx="8" fill={MEMPHIS.naranja} {...borde} />
+    <rect x="90" y="34" width="22" height="30" rx="8" fill={MEMPHIS.naranja} {...borde} />
+    <rect x="30" y="50" width="60" height="50" rx="6" fill={MEMPHIS.celeste} {...borde} />
+    <rect x="38" y="58" width="44" height="22" rx="3" fill="#2b2b2e" />
+    <circle cx="50" cy="69" r="5" fill="#ddd" />
+    <circle cx="70" cy="69" r="5" fill="#ddd" />
+  </svg>
+);
+export const Patin = () => (
+  <svg width="150" height="140" viewBox="0 0 110 100" style={sombra}>
+    <path d="M30 10 L58 10 L60 55 L98 62 C104 63 104 78 98 78 L18 78 C12 78 12 70 14 62 Z" fill={MEMPHIS.rosa} {...borde} />
+    <path d="M34 22 H56 M34 34 H56" stroke="white" strokeWidth="4" strokeLinecap="round" />
+    {[30, 56, 84].map((x) => (
+      <circle key={x} cx={x} cy="88" r="9" fill={MEMPHIS.amarillo} stroke="white" strokeWidth="5" paintOrder="stroke" />
+    ))}
+  </svg>
+);
+export const Lentes3D = () => (
+  <svg width="170" height="90" viewBox="0 0 130 65" style={sombra}>
+    <rect x="4" y="8" width="122" height="44" rx="10" fill="white" {...borde} />
+    <rect x="14" y="16" width="44" height="28" rx="6" fill="#e2402f" />
+    <rect x="72" y="16" width="44" height="28" rx="6" fill="#29b6f6" />
+  </svg>
+);

@@ -16,8 +16,8 @@ export type AlbumProps = {
 export const ALBUM_POR_DEFECTO: AlbumProps = {
   tituloTapa: "PROMO 2026",
   subtituloTapa: "nuestro cuaderno de recuerdos",
-  hojas: [3, 4, 5, 4, 6, 5, 8, 6, 4, 6, 8, 5, 6, 8, 4, 6, 5, 8, 6, 5, 8, 6, 4, 8, 6, 5, 8, 6, 3],
-  duracionObjetivo: 190 * 30,
+  hojas: [3, 4, 2, 4, 5, 3, 4, 2, 5, 4, 3, 4, 5, 2, 4, 3, 5, 4],
+  duracionObjetivo: 240 * 30,
   fotos: FOTOS_ALBUM,
 };
 
