@@ -14,8 +14,9 @@ import {
 import { MANUSCRITA, RETRO } from "../Cuaderno/fuentes";
 import { Cinta, Espiral, Hoja, rasgado, Textura } from "../Cuaderno/papel";
 import { PEGATINAS } from "../Cuaderno/pegatinas";
-import { AlbumProps, armarAlbum, COLORES_M, FotoAlbum, HojaAlbum, MEMPHIS, TA } from "./config";
-import { Confeti } from "./memphis";
+import { AlbumProps, armarAlbum, COLORES_M, HojaAlbum, MEMPHIS, TA } from "./config";
+import { Confeti, Figura } from "./memphis";
+import { LISTA_PEGATINAS } from "./Recursos";
 import { Camara, Celular, Destello, GameBoy, Lentes3D, Patin, Pizza, Rubik, Tele, Vinilo, Walkman } from "./pegatinas2";
 
 const clamp = { extrapolateLeft: "clamp", extrapolateRight: "clamp" } as const;
@@ -23,306 +24,92 @@ const W = 1800;
 const H = 1000;
 
 // Pegatinas SIN texto
-const STICKERS = [
-  PEGATINAS[0], // estrella
-  () => <Camara />,
-  PEGATINAS[1], // corazón
-  () => <GameBoy />,
-  PEGATINAS[2], // casete
-  () => <Pizza />,
-  PEGATINAS[4], // carita
-  () => <Tele />,
-  PEGATINAS[5], // rayo
-  () => <Celular />,
-  PEGATINAS[8], // arcoíris
-  () => <Destello />,
-];
 
-const DECOR = [
-  () => <Vinilo />,
-  () => <Rubik />,
-  () => <Walkman />,
-  () => <Patin />,
-  () => <Lentes3D />,
-  PEGATINAS[2],
-  () => <Tele />,
-  () => <GameBoy />,
-  PEGATINAS[0],
-  () => <Camara />,
-  PEGATINAS[1],
-  () => <Destello />,
-];
 
-// Disposición automática tipo "collage justificado": reparte las fotos en 1, 2 o 3 filas
-// para que ocupen la mayor superficie posible de la hoja, respetando su forma.
-type Lugar = [number, number, number, number];
-const AREA = { x: 205, y: 118, w: 1540, h: 780 };
-const GAP = 46;
-
-// Divide las fotos en filas que llenan TODO el ancho y TODO el alto de la hoja.
-// Cada foto se recorta un poco si hace falta (sin deformar); se elige el reparto que menos recorta.
-const disponer = (fotos: FotoAlbum[], semilla: string): Lugar[] => {
-  const n = fotos.length;
-  const asp = fotos.map((f) => f.ancho / f.alto);
-  if (n === 1) {
-    const a = Math.max(asp[0], 0.75);
-    let h = AREA.h;
-    let w = h * a;
-    if (w > AREA.w) {
-      w = AREA.w;
-      h = w / a;
-    }
-    return [[AREA.x + AREA.w / 2, AREA.y + AREA.h / 2, w, h]];
-  }
-  // todas las particiones en filas consecutivas (n <= 8)
-  const particiones: number[][] = [];
-  const rec = (resto: number, acc: number[]) => {
-    if (resto === 0) {
-      if (acc.length <= 3) particiones.push(acc);
-      return;
-    }
-    for (let k = 1; k <= Math.min(4, resto); k++) rec(resto - k, [...acc, k]);
-  };
-  rec(n, []);
-  let mejor: { costo: number; lugares: Lugar[] } | null = null;
-  for (const filas of particiones) {
-    const r = filas.length;
-    const sumas: number[] = [];
-    let idx = 0;
-    filas.forEach((k) => {
-      sumas.push(asp.slice(idx, idx + k).reduce((x, y) => x + y, 0));
-      idx += k;
-    });
-    // alto ideal de cada fila proporcional a 1/suma de proporciones
-    const pesos = sumas.map((s2, fi) => (AREA.w - GAP * (filas[fi] - 1)) / s2);
-    const totalAlto = AREA.h - GAP * (r - 1);
-    const escala = totalAlto / pesos.reduce((x, y) => x + y, 0);
-    const alturas = pesos.map((p) => p * escala);
-    let costo = 0;
-    const lugares: Lugar[] = [];
-    let y = AREA.y;
-    idx = 0;
-    filas.forEach((k, fi) => {
-      const h = alturas[fi];
-      const anchoUtil = AREA.w - GAP * (k - 1);
-      let x = AREA.x;
-      for (let j = 0; j < k; j++) {
-        const i = idx + j;
-        const w = (asp[i] / sumas[fi]) * anchoUtil;
-        const celda = w / h;
-        costo += Math.abs(Math.log(celda / asp[i])) * (w * h);
-        if (celda / asp[i] > 1.5 || asp[i] / celda > 1.5) costo += 1e12; // recorte excesivo
-        const jx = (random(`${semilla}-jx${i}`) - 0.5) * 14;
-        const jy = (random(`${semilla}-jy${i}`) - 0.5) * 14;
-        lugares[i] = [x + w / 2 + jx, y + h / 2 + jy, w, h];
-        x += w + GAP;
-      }
-      idx += k;
-      y += h + GAP;
-    });
-    if (!mejor || costo < mejor.costo) mejor = { costo, lugares };
-  }
-  return mejor!.lugares;
-};
-
-const EFECTOS = ["caida", "desliza", "giro", "flash", "revelado", "zoom"] as const;
+// Las hojas se diseñan con scripts/disenar_hojas.py (paginas.json): fotos completas, sin recorte.
+import type { FotoHoja } from "./config";
+const EFECTOS = ["caida", "desliza", "giro", "pop", "sube", "zoom"] as const;
 type Efecto = (typeof EFECTOS)[number];
+const MARCO = 16; // borde blanco del marco (la foto no se toca)
 
-/* ───────── Foto con marco rasgado de color + efecto de entrada ───────── */
-const FotoPegada: React.FC<{ foto: FotoAlbum; lugar: Lugar; t: number; n: number; efecto: Efecto; conPegatina: boolean }> = ({
-  foto,
-  lugar,
-  t,
-  n,
-  efecto,
-  conPegatina,
-}) => {
+/* ───────── Foto completa con marco rasgado de color + efecto de entrada ───────── */
+const FotoPegada: React.FC<{ foto: FotoHoja; t: number; n: number; efecto: Efecto }> = ({ foto, t, n, efecto }) => {
   const { fps } = useVideoConfig();
   if (t < 0) return null;
-  const [cx, cy, mw, mh] = lugar;
-  const w = mw;
-  const h = mh;
+  const { cx, cy, w, h } = foto;
   const sem = `f${n}`;
-  const ang = (random(`${sem}-a`) - 0.5) * 7;
+  const ang = foto.rot;
   const color = COLORES_M[n % COLORES_M.length];
-
-  let tx = 0;
-  let ty = 0;
-  let rot = ang;
-  let esc = 1;
-  let flash = 0;
-  let revela = 1;
-  let opac = 1;
+  let tx = 0, ty = 0, rot = ang, esc = 1, opac = 1;
   if (efecto === "caida") {
     const s = spring({ frame: t, fps, config: { damping: 11, stiffness: 140 } });
-    ty = (1 - s) * -1100;
-    rot = ang + (1 - s) * 25;
+    ty = (1 - s) * -1100; rot = ang + (1 - s) * 25;
   } else if (efecto === "desliza") {
     const s = spring({ frame: t, fps, config: { damping: 16, stiffness: 120 } });
-    tx = (1 - s) * (cx < W / 2 ? -1500 : 1500);
-    rot = ang + (1 - s) * (cx < W / 2 ? -20 : 20);
+    tx = (1 - s) * (cx < 900 ? -1500 : 1500); rot = ang + (1 - s) * (cx < 900 ? -20 : 20);
   } else if (efecto === "giro") {
     const s = spring({ frame: t, fps, config: { damping: 13 } });
-    esc = s;
-    rot = ang - (1 - s) * 220;
-  } else if (efecto === "flash") {
-    esc = interpolate(t, [0, 8], [1.18, 1], { ...clamp, easing: Easing.out(Easing.cubic) });
-    flash = interpolate(t, [0, 3, 14], [0, 1, 0], clamp);
-    opac = interpolate(t, [0, 2], [0, 1], clamp);
-  } else if (efecto === "revelado") {
-    esc = spring({ frame: t, fps, config: { damping: 15 } }) * 0.08 + 0.92;
-    revela = interpolate(t, [4, 34], [0, 1], clamp);
+    esc = s; rot = ang - (1 - s) * 220;
+  } else if (efecto === "pop") {
+    esc = spring({ frame: t, fps, config: { damping: 9, stiffness: 170 } }) * 0.4 + 0.6;
     opac = interpolate(t, [0, 5], [0, 1], clamp);
+  } else if (efecto === "sube") {
+    const s = spring({ frame: t, fps, config: { damping: 15 } });
+    ty = (1 - s) * 260; opac = interpolate(t, [0, 6], [0, 1], clamp);
   } else {
-    const s = spring({ frame: t, fps, config: { damping: 8, stiffness: 160 } });
-    esc = s;
+    esc = spring({ frame: t, fps, config: { damping: 8, stiffness: 160 } });
   }
   const cinta = interpolate(t, [10, 18], [0, 1], clamp);
-  const marco = 26;
-
-  // pegatina
-  const tp = t - 14;
-  const tipoPeg = Math.floor(random(`${sem}-p`) * STICKERS.length);
-  const Peg = STICKERS[tipoPeg];
-  const efPeg = n % 3;
-  const sp = spring({ frame: tp, fps, config: { damping: 8, stiffness: 170 } });
-  const pegEstilo: React.CSSProperties =
-    efPeg === 0
-      ? { transform: `scale(${sp}) rotate(${(random(`${sem}-r`) - 0.5) * 30 + Math.sin(tp / 9) * 4}deg)` }
-      : efPeg === 1
-        ? { transform: `perspective(600px) rotateX(${(1 - sp) * 85}deg) scale(${0.6 + sp * 0.4})`, opacity: tp > 0 ? 1 : 0 }
-        : { transform: `rotate(${(1 - sp) * 360 + Math.sin(tp / 8) * 5}deg) scale(${sp})` };
-  const esquina = Math.floor(random(`${sem}-e`) * 4);
-  const posPeg: React.CSSProperties = [
-    { right: -60, top: -60 },
-    { left: -60, bottom: -60 },
-    { right: -60, bottom: -60 },
-    { left: -60, top: -60 },
-  ][esquina];
-  const escPeg = Math.min(1, Math.max(0.5, Math.min(w, h) / 380));
-
+  const borde = 10; // papel de color que asoma alrededor del borde blanco
+  const W = w + 2 * MARCO + 2 * borde;
+  const H = h + 2 * MARCO + 2 * borde;
   return (
-    <div
-      style={{
-        position: "absolute",
-        left: cx - w / 2 - marco,
-        top: cy - h / 2 - marco,
-        width: w + marco * 2,
-        height: h + marco * 2,
-        transform: `translate(${tx}px, ${ty}px) rotate(${rot}deg) scale(${esc})`,
-        opacity: opac,
-      }}
-    >
-      {/* marco de papel de color rasgado */}
+    <div style={{ position: "absolute", left: cx - W / 2, top: cy - H / 2, width: W, height: H, transform: `translate(${tx}px, ${ty}px) rotate(${rot}deg) scale(${esc})`, opacity: opac }}>
       <div style={{ position: "absolute", inset: 0, filter: "drop-shadow(4px 8px 8px rgba(0,0,0,0.35))" }}>
-        <div style={{ position: "absolute", inset: 0, background: color, clipPath: rasgado(`${sem}-m`, 1.8, 1.3) }} />
-        {/* borde blanco + foto */}
-        <div style={{ position: "absolute", inset: marco - 10, background: "#fffdf6", padding: 10 }}>
-          <div style={{ width: "100%", height: "100%", overflow: "hidden", position: "relative", background: "#ddd" }}>
-            {foto.archivo ? (
-              <Img
-                src={staticFile(`fotos/${foto.archivo}`)}
-                style={{
-                  width: "100%",
-                  height: "100%",
-                  objectFit: "cover",
-                  objectPosition: "center 35%",
-                  filter: `sepia(${(1 - revela) * 0.9}) brightness(${0.25 + revela * 0.75}) contrast(1.05)`,
-                }}
-              />
-            ) : (
-              <AbsoluteFill style={{ background: "#e8ddd0", justifyContent: "center", alignItems: "center", fontFamily: "sans-serif", fontSize: 40, color: "#666" }}>
-                Tu foto
-              </AbsoluteFill>
-            )}
-            <AbsoluteFill style={{ background: "white", opacity: flash }} />
-          </div>
+        <div style={{ position: "absolute", inset: 0, background: color, clipPath: rasgado(`${sem}-m`, 1.4, 1.2) }} />
+        <div style={{ position: "absolute", left: borde, top: borde, width: w + 2 * MARCO, height: h + 2 * MARCO, background: "#fffdf6" }}>
+          <Img src={staticFile(`fotos/${foto.archivo}`)} style={{ position: "absolute", left: MARCO, top: MARCO, width: w, height: h }} />
         </div>
       </div>
-      <Textura id={`t-${sem}`} opacidad={0.08} />
-      {/* cinta washi */}
       <div style={{ opacity: cinta }}>
-        <Cinta
-          color={COLORES_M[(n + 3) % COLORES_M.length]}
-          patron={n}
-          ancho={Math.min(170, w * 0.45)}
-          estilo={{ left: -30, top: -8, transform: `rotate(-35deg) scaleX(${cinta})`, transformOrigin: "left" }}
-        />
+        <Cinta color={COLORES_M[(n + 3) % COLORES_M.length]} patron={n} ancho={Math.min(150, w * 0.4)}
+          estilo={{ left: -26, top: -6, transform: `rotate(-35deg) scaleX(${cinta})`, transformOrigin: "left" }} />
       </div>
-      {conPegatina ? (
-        <div style={{ position: "absolute", ...posPeg, ...pegEstilo }}>
-          <div style={{ transform: `scale(${escPeg})` }}>
-            <Peg />
-          </div>
-        </div>
-      ) : null}
     </div>
   );
 };
 
-/* ───────── Hoja del álbum ───────── */
-const lugaresConfeti = (indice: number): [number, number][] => {
-  const out: [number, number][] = [];
-  for (let i = 0; i < 6; i++) {
-    out.push([260 + i * 270 + (random(`cx${indice}-${i}`) - 0.5) * 120, 48 + random(`cy${indice}-${i}`) * 20]);
-    out.push([300 + i * 260 + (random(`bx${indice}-${i}`) - 0.5) * 120, 958 + random(`by${indice}-${i}`) * 18]);
-  }
-  return out.filter((_, i) => random(`keep${indice}-${i}`) > 0.35);
-};
-
-// Pegatinas retro en las esquinas de la hoja (aparecen después de las fotos)
-const ESQUINAS: [number, number][] = [
-  [255, 95],
-  [1720, 95],
-  [1720, 925],
-  [255, 925],
-  [985, 55],
-  [985, 955],
-];
-const Decoracion: React.FC<{ hoja: HojaAlbum; t: number }> = ({ hoja, t }) => {
-  const { fps } = useVideoConfig();
-  const n = 3 + (hoja.indice % 2);
-  const inicio = TA.inicio + (hoja.fotos.length - 1) * hoja.paso + 18;
-  const elegidas = [0, 1, 2, 3, 4, 5].sort((a, b) => random(`de${hoja.indice}${a}`) - random(`de${hoja.indice}${b}`)).slice(0, n);
-  return (
-    <>
-      {elegidas.map((e, k) => {
-        const tt = t - inicio - k * 6;
-        if (tt < 0) return null;
-        const s = spring({ frame: tt, fps, config: { damping: 8, stiffness: 170 } });
-        const [x, y] = ESQUINAS[e];
-        const D = DECOR[Math.floor(random(`dk${hoja.indice}-${e}`) * DECOR.length)];
-        const rot = (random(`dr${hoja.indice}-${e}`) - 0.5) * 40 + Math.sin(tt / 10) * 4;
-        return (
-          <div key={e} style={{ position: "absolute", left: x, top: y, transform: `translate(-50%, -50%) rotate(${rot}deg) scale(${s})` }}>
-            <D />
-          </div>
-        );
-      })}
-    </>
-  );
-};
-
 const PaginaAlbum: React.FC<{ hoja: HojaAlbum; t: number }> = ({ hoja, t }) => {
-  const n = hoja.fotos.length;
-  const lugares = disponer(hoja.fotos, `d${hoja.indice}`);
+  const { fps } = useVideoConfig();
   const paso = hoja.paso;
+  const finFotos = TA.inicio + (hoja.fotos.length - 1) * paso + 16;
   return (
     <Hoja indice={hoja.indice}>
-      {t >= 0 ? <Confeti lugares={lugaresConfeti(hoja.indice)} semilla={`h${hoja.indice}`} desde={2} tam={64} /> : null}
-      <Decoracion hoja={hoja} t={t} />
-      {hoja.fotos.map((foto, i) => {
-        const g = hoja.primera + i;
+      {t >= 0
+        ? hoja.figuras.map((f, i) => {
+            const s = spring({ frame: t - 2 - i * 2, fps, config: { damping: 10, stiffness: 160 } });
+            return (
+              <div key={`f${i}`} style={{ position: "absolute", left: f.x, top: f.y + Math.sin((t + i * 17) / 18) * 4, transform: `translate(-50%, -50%) rotate(${f.rot}deg) scale(${s})` }}>
+                <Figura tipo={f.tipo % 10} color={COLORES_M[Math.floor(f.tipo / 10) % COLORES_M.length]} tam={f.s} />
+              </div>
+            );
+          })
+        : null}
+      {hoja.fotos.map((foto, i) => (
+        <FotoPegada key={i} foto={foto} t={t - TA.inicio - i * paso} n={hoja.primera + i} efecto={EFECTOS[(hoja.indice * 2 + i) % EFECTOS.length]} />
+      ))}
+      {hoja.pegatinas.map((p, k) => {
+        const tt = t - finFotos - k * 6;
+        if (tt < 0) return null;
+        const s = spring({ frame: tt, fps, config: { damping: 8, stiffness: 170 } });
+        const P = LISTA_PEGATINAS[p.tipo % LISTA_PEGATINAS.length][1];
         return (
-          <FotoPegada
-            key={i}
-            foto={foto}
-            lugar={lugares[i]}
-            t={t - TA.inicio - i * paso}
-            n={g}
-            efecto={EFECTOS[(hoja.indice * 2 + i) % EFECTOS.length]}
-            conPegatina={(hoja.primera + i) % 3 === 1}
-          />
+          <div key={`p${k}`} style={{ position: "absolute", left: p.x, top: p.y, width: 0, height: 0 }}>
+            <div style={{ position: "absolute", left: -p.s / 2, top: -p.s / 2, width: p.s, height: p.s, display: "flex", alignItems: "center", justifyContent: "center",
+              transform: `rotate(${p.rot + Math.sin(tt / 10) * 4}deg) scale(${s * (p.s / 150)})` }}>
+              <P />
+            </div>
+          </div>
         );
       })}
     </Hoja>
@@ -353,7 +140,17 @@ const Logo: React.FC<{ t: number; tam: number }> = ({ t, tam }) => {
 
 const Tapa: React.FC<{ titulo: string; subtitulo: string; t: number }> = ({ titulo, subtitulo, t }) => {
   const { fps } = useVideoConfig();
-  const etiqueta = spring({ frame: t - 22, fps, config: { damping: 11 } });
+  const etiqueta = spring({ frame: t - 14, fps, config: { damping: 11 } });
+  // efecto máquina de escribir
+  const t1 = 30, v1 = 3.2; // título: una letra cada ~3 frames
+  const n1 = Math.max(0, Math.min(titulo.length, Math.floor((t - t1) / v1)));
+  const t2 = t1 + titulo.length * v1 + 8, v2 = 1.6;
+  const n2 = Math.max(0, Math.min(subtitulo.length, Math.floor((t - t2) / v2)));
+  const escribiendo2 = t >= t2;
+  const cursor = Math.floor(t / 8) % 2 === 0 ? 1 : 0;
+  const Cursor: React.FC<{ color: string; alto: number }> = ({ color, alto }) => (
+    <span style={{ display: "inline-block", width: alto * 0.08, height: alto * 0.85, background: color, marginLeft: 6, verticalAlign: "-0.08em", opacity: cursor }} />
+  );
   return (
     <AbsoluteFill style={{ background: MEMPHIS.fondo, overflow: "hidden" }}>
       <Confeti lugares={grilla("tapa", 56)} semilla="tapa" desde={0} tam={105} />
@@ -364,8 +161,14 @@ const Tapa: React.FC<{ titulo: string; subtitulo: string; t: number }> = ({ titu
       <AbsoluteFill style={{ justifyContent: "center", alignItems: "center", paddingTop: 230 }}>
         <div style={{ transform: `rotate(-3deg) scale(${etiqueta})`, filter: "drop-shadow(8px 12px 12px rgba(0,0,0,0.55))" }}>
           <div style={{ background: "#fffdf6", clipPath: rasgado("tapa2", 1.2, 1), padding: "60px 120px", textAlign: "center" }}>
-            <div style={{ fontFamily: RETRO, fontSize: 160, color: MEMPHIS.rosa, textShadow: `7px 7px 0 ${MEMPHIS.turquesa}`, lineHeight: 1 }}>{titulo}</div>
-            <div style={{ fontFamily: MANUSCRITA, fontSize: 72, color: "#1d3a8a", marginTop: 16 }}>{subtitulo}</div>
+            <div style={{ position: "relative", fontFamily: RETRO, fontSize: 160, color: MEMPHIS.rosa, textShadow: `7px 7px 0 ${MEMPHIS.turquesa}`, lineHeight: 1, whiteSpace: "pre" }}>
+              <span style={{ visibility: "hidden" }}>{titulo}</span>
+              <span style={{ position: "absolute", left: 0, top: 0 }}>{titulo.slice(0, n1)}{!escribiendo2 ? <Cursor color={MEMPHIS.rosa} alto={160} /> : null}</span>
+            </div>
+            <div style={{ position: "relative", fontFamily: MANUSCRITA, fontSize: 72, color: "#1d3a8a", marginTop: 16, whiteSpace: "pre" }}>
+              <span style={{ visibility: "hidden" }}>{subtitulo}</span>
+              <span style={{ position: "absolute", left: 0, top: 0 }}>{subtitulo.slice(0, n2)}{escribiendo2 ? <Cursor color="#1d3a8a" alto={72} /> : null}</span>
+            </div>
           </div>
         </div>
       </AbsoluteFill>

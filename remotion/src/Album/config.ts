@@ -1,7 +1,6 @@
 // ÁLBUM "Promo 2026 · Video Final Parte 1"
 // Basado en el cuaderno de Canva + elementos Memphis de la invitación del acto.
 export type FotoAlbum = { archivo: string; ancho: number; alto: number };
-import { FOTOS_ALBUM } from "./fotosAlbum";
 
 export type AlbumProps = {
   tituloTapa: string;
@@ -18,7 +17,7 @@ export const ALBUM_POR_DEFECTO: AlbumProps = {
   subtituloTapa: "nuestro cuaderno de recuerdos",
   hojas: [3, 4, 2, 4, 5, 3, 4, 2, 5, 4, 3, 4, 5, 2, 4, 3, 5, 4],
   duracionObjetivo: 240 * 30,
-  fotos: FOTOS_ALBUM,
+  fotos: [],
 };
 
 // Colores tomados de la invitación / diploma
@@ -34,38 +33,33 @@ export const MEMPHIS = {
 };
 export const COLORES_M = [MEMPHIS.turquesa, MEMPHIS.rosa, MEMPHIS.amarillo, MEMPHIS.violeta, MEMPHIS.verde, MEMPHIS.celeste, MEMPHIS.naranja];
 
-export const TA = { tapa: 90, giro: 24, inicio: 12, aparecer: 24, mirarMin: 40, volteo: 36, contratapa: 75 };
+export const TA = { tapa: 160, giro: 24, inicio: 12, aparecer: 24, mirarMin: 30, volteo: 36, contratapa: 75 };
 
-export type HojaAlbum = { inicio: number; duracion: number; fotos: FotoAlbum[]; indice: number; primera: number; paso: number };
+import PAGINAS from "./paginas.json";
+export type FotoHoja = { archivo: string; cx: number; cy: number; w: number; h: number; rot: number };
+export type HojaAlbum = {
+  inicio: number; duracion: number; indice: number; primera: number; paso: number;
+  fotos: FotoHoja[];
+  pegatinas: { x: number; y: number; s: number; tipo: number; rot: number }[];
+  figuras: { x: number; y: number; s: number; tipo: number; rot: number }[];
+};
 
 export const armarAlbum = (p: AlbumProps) => {
-  const sinFinal = p.fotos.slice(0, -1);
-  const final = p.fotos[p.fotos.length - 1];
-  const grupos: FotoAlbum[][] = [];
-  let i = 0;
-  let k = 0;
-  while (i < sinFinal.length) {
-    const n = Math.max(1, Math.min(8, p.hojas[k % p.hojas.length] ?? 6, sinFinal.length - i));
-    grupos.push(sinFinal.slice(i, i + n));
-    i += n;
-    k++;
-  }
-  if (final) grupos.push([final]); // la foto de todos, sola en la última hoja
-  const disponible = p.duracionObjetivo - TA.tapa - TA.contratapa;
+  const paginas = PAGINAS as Omit<HojaAlbum, "inicio" | "duracion" | "indice" | "primera" | "paso">[];
   const extraFinal = 60;
-  const porHoja = Math.floor((disponible - extraFinal) / grupos.length);
+  const disponible = p.duracionObjetivo - TA.tapa - TA.contratapa - extraFinal;
+  const porHoja = Math.floor(disponible / paginas.length);
   const hojas: HojaAlbum[] = [];
   let inicio = TA.tapa;
   let primera = 0;
-  grupos.forEach((fotos, idx) => {
-    const esUltima = idx === grupos.length - 1;
-    let duracion = porHoja + (esUltima ? extraFinal : 0);
-    if (esUltima) duracion = p.duracionObjetivo - TA.contratapa - inicio + TA.giro; // ajusta el redondeo
+  paginas.forEach((pg, idx) => {
+    const esUltima = idx === paginas.length - 1;
+    const duracion = esUltima ? p.duracionObjetivo - TA.contratapa - inicio + TA.giro : porHoja;
     const ventana = duracion - TA.giro - TA.mirarMin - TA.inicio - TA.aparecer;
-    const paso = Math.max(6, Math.min(30, Math.floor(ventana / Math.max(1, fotos.length - 1))));
-    hojas.push({ inicio, duracion, fotos, indice: idx, primera, paso });
+    const paso = Math.max(6, Math.min(26, Math.floor(ventana / Math.max(1, pg.fotos.length - 1))));
+    hojas.push({ ...pg, inicio, duracion, indice: idx, primera, paso });
     inicio += duracion;
-    primera += fotos.length;
+    primera += pg.fotos.length;
   });
   return { hojas, total: p.duracionObjetivo };
 };
