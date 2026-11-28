@@ -9,7 +9,7 @@ chicos = ["a157","a158","a150","a153","a155","a156","a151","a161","a149","a154",
 final = "a002"
 resto = [k for k in sorted(por) if k not in chicos and k != final]
 random.Random(2026).shuffle(resto)
-resto = [k for k in resto if k not in ("a112", "a116", "a123", "a093")]   # fotos repetidas
+resto = [k for k in resto if k not in ("a112", "a093")]   # fotos repetidas
 
 # área útil dentro de la hoja (coordenadas de la hoja 1800x1000)
 AX, AY, AW, AH = 215, 90, 1520, 820
