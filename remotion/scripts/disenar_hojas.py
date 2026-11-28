@@ -9,6 +9,7 @@ chicos = ["a157","a158","a150","a153","a155","a156","a151","a161","a149","a154",
 final = "a002"
 resto = [k for k in sorted(por) if k not in chicos and k != final]
 random.Random(2026).shuffle(resto)
+resto = [k for k in resto if k not in ("a110", "a112")]   # fotos repetidas
 
 # área útil dentro de la hoja (coordenadas de la hoja 1800x1000)
 AX, AY, AW, AH = 215, 90, 1520, 820
@@ -81,6 +82,7 @@ def armar(lista, ventana, ordenado):
         cand = pool[:ventana]; best = None
         for n in range(3, 7):
             if n > len(pool): break
+            if 0 < len(pool) - n < 3: continue   # que no quede una hoja casi vacía
             combos = [tuple(cand[:n])] if ordenado else itertools.combinations(cand, n)
             for c in combos:
                 if ordenado is False and cand[0] not in c: continue   # avanza siempre
